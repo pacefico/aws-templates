@@ -1,0 +1,24 @@
+{
+  "service_name": "ec-comput",
+  "name": "ec-compute",
+  "domain": "cloud",
+  "version": "1.0.0",
+  "description": "Aws elastic compute services",
+  "author": "Paulo Figueiredo",
+  "license": "",
+  "repository": {
+    "type": "github",
+    "url": "http://github/pacefico/aws-compute"
+  },
+  "keywords": [],
+  "devDependencies": {
+    "mocha": "^5.2.0",
+    "typescript": "^2.3.2"
+  },
+  "dependencies": {
+    "serverless": "^1.13.2",
+    "serverless-plugin-scripts": "^1.0.2",
+    "serverless-pseudo-parameters": "^2.2.0",
+    "serverless-python-requirements": "^2.3.3"
+  }
+}

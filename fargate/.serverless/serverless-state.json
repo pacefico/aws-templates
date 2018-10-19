@@ -1,0 +1,339 @@
+{
+  "service": {
+    "service": "ec-compute-fargate",
+    "serviceObject": {
+      "name": "ec-compute-fargate"
+    },
+    "provider": {
+      "stage": "dev",
+      "region": "us-east-1",
+      "variableSyntax": "\\${([ ~:a-zA-Z0-9._'\",\\-\\/\\(\\)]+?)}",
+      "name": "aws",
+      "runtime": "python3.6",
+      "iamRoleStatements": [
+        {
+          "Effect": "Allow",
+          "Action": [
+            "lambda:InvokeFunction"
+          ],
+          "Resource": "arn:aws:lambda:us-east-1:*:function:*"
+        },
+        {
+          "Effect": "Allow",
+          "Action": [
+            "ecs:*"
+          ],
+          "Resource": "*"
+        },
+        {
+          "Effect": "Allow",
+          "Action": [
+            "iam:PassRole",
+            "iam:ListInstanceProfiles"
+          ],
+          "Resource": "arn:aws:iam::*:role/ecsTaskExecutionRole"
+        }
+      ],
+      "versionFunctions": true,
+      "remoteFunctionData": null,
+      "compiledCloudFormationTemplate": {
+        "AWSTemplateFormatVersion": "2010-09-09",
+        "Description": "The AWS CloudFormation template for this Serverless application",
+        "Resources": {
+          "ServerlessDeploymentBucket": {
+            "Type": "AWS::S3::Bucket"
+          },
+          "FargateLogGroup": {
+            "Type": "AWS::Logs::LogGroup",
+            "Properties": {
+              "LogGroupName": "/aws/lambda/ec-compute-fargate-dev-fargate"
+            }
+          },
+          "IamRoleLambdaExecution": {
+            "Type": "AWS::IAM::Role",
+            "Properties": {
+              "AssumeRolePolicyDocument": {
+                "Version": "2012-10-17",
+                "Statement": [
+                  {
+                    "Effect": "Allow",
+                    "Principal": {
+                      "Service": [
+                        "lambda.amazonaws.com"
+                      ]
+                    },
+                    "Action": [
+                      "sts:AssumeRole"
+                    ]
+                  }
+                ]
+              },
+              "Policies": [
+                {
+                  "PolicyName": {
+                    "Fn::Join": [
+                      "-",
+                      [
+                        "dev",
+                        "ec-compute-fargate",
+                        "lambda"
+                      ]
+                    ]
+                  },
+                  "PolicyDocument": {
+                    "Version": "2012-10-17",
+                    "Statement": [
+                      {
+                        "Effect": "Allow",
+                        "Action": [
+                          "logs:CreateLogStream"
+                        ],
+                        "Resource": [
+                          {
+                            "Fn::Sub": "arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/ec-compute-fargate-dev-fargate:*"
+                          }
+                        ]
+                      },
+                      {
+                        "Effect": "Allow",
+                        "Action": [
+                          "logs:PutLogEvents"
+                        ],
+                        "Resource": [
+                          {
+                            "Fn::Sub": "arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/ec-compute-fargate-dev-fargate:*:*"
+                          }
+                        ]
+                      },
+                      {
+                        "$ref": "$[\"service\"][\"provider\"][\"iamRoleStatements\"][0]"
+                      },
+                      {
+                        "$ref": "$[\"service\"][\"provider\"][\"iamRoleStatements\"][1]"
+                      },
+                      {
+                        "$ref": "$[\"service\"][\"provider\"][\"iamRoleStatements\"][2]"
+                      }
+                    ]
+                  }
+                }
+              ],
+              "Path": "/",
+              "RoleName": {
+                "Fn::Join": [
+                  "-",
+                  [
+                    "ec-compute-fargate",
+                    "dev",
+                    "us-east-1",
+                    "lambdaRole"
+                  ]
+                ]
+              }
+            }
+          },
+          "FargateLambdaFunction": {
+            "Type": "AWS::Lambda::Function",
+            "Properties": {
+              "Code": {
+                "S3Bucket": {
+                  "Ref": "ServerlessDeploymentBucket"
+                },
+                "S3Key": "serverless/ec-compute-fargate/dev/1539835939151-2018-10-18T04:12:19.151Z/ec-compute-fargate.zip"
+              },
+              "FunctionName": "ec-compute-fargate-dev-fargate",
+              "Handler": "lambda/handler.handler",
+              "MemorySize": 1024,
+              "Role": {
+                "Fn::GetAtt": [
+                  "IamRoleLambdaExecution",
+                  "Arn"
+                ]
+              },
+              "Runtime": "python3.6",
+              "Timeout": 60
+            },
+            "DependsOn": [
+              "FargateLogGroup",
+              "IamRoleLambdaExecution"
+            ]
+          },
+          "FargateLambdaVersionSxeuz9Rj1Vo6CnvYuiS4n388g6QIaEO9nSmfj3GLYBU": {
+            "Type": "AWS::Lambda::Version",
+            "DeletionPolicy": "Retain",
+            "Properties": {
+              "FunctionName": {
+                "Ref": "FargateLambdaFunction"
+              },
+              "CodeSha256": "pfZDSOs/NMhpVlopUMV4hhaICCFqitIEWtjUleM56Xc="
+            }
+          },
+          "EcsRepository": {
+            "Type": "AWS::ECR::Repository",
+            "Properties": {
+              "RepositoryName": "ec-compute-fargate-dev"
+            }
+          },
+          "LogGroup": {
+            "Type": "AWS::Logs::LogGroup",
+            "Properties": {
+              "LogGroupName": "ec-compute-fargate-dev"
+            }
+          },
+          "TaskDefinition": {
+            "Type": "AWS::ECS::TaskDefinition",
+            "Properties": {
+              "Family": "ec-compute-fargate-dev",
+              "Cpu": 512,
+              "Memory": 1024,
+              "NetworkMode": "awsvpc",
+              "RequiresCompatibilities": [
+                "FARGATE"
+              ],
+              "TaskRoleArn": "arn:aws:iam::573944535954:role/ecsTaskExecutionRole",
+              "ExecutionRoleArn": "arn:aws:iam::573944535954:role/ecsTaskExecutionRole",
+              "ContainerDefinitions": [
+                {
+                  "Name": "ec-compute-fargate-dev",
+                  "Cpu": 512,
+                  "Memory": 1024,
+                  "Image": "573944535954.dkr.ecr.us-east-1.amazonaws.com/ec-compute-fargate-dev",
+                  "LogConfiguration": {
+                    "LogDriver": "awslogs",
+                    "Options": {
+                      "awslogs-group": "ec-compute-fargate-dev",
+                      "awslogs-region": "us-east-1",
+                      "awslogs-stream-prefix": "ecs"
+                    }
+                  }
+                }
+              ]
+            }
+          }
+        },
+        "Outputs": {
+          "ServerlessDeploymentBucketName": {
+            "Value": {
+              "Ref": "ServerlessDeploymentBucket"
+            }
+          },
+          "FargateLambdaFunctionQualifiedArn": {
+            "Description": "Current Lambda function version",
+            "Value": {
+              "Ref": "FargateLambdaVersionSxeuz9Rj1Vo6CnvYuiS4n388g6QIaEO9nSmfj3GLYBU"
+            }
+          }
+        }
+      },
+      "coreCloudFormationTemplate": {
+        "AWSTemplateFormatVersion": "2010-09-09",
+        "Description": "The AWS CloudFormation template for this Serverless application",
+        "Resources": {
+          "ServerlessDeploymentBucket": {
+            "Type": "AWS::S3::Bucket"
+          }
+        },
+        "Outputs": {
+          "ServerlessDeploymentBucketName": {
+            "Value": {
+              "Ref": "ServerlessDeploymentBucket"
+            }
+          }
+        }
+      },
+      "vpc": {}
+    },
+    "custom": {
+      "account": 573944535954,
+      "task_name": "ec-compute-fargate-dev",
+      "repo_uri": "573944535954.dkr.ecr.us-east-1.amazonaws.com/ec-compute-fargate-dev",
+      "scripts": {
+        "commands": {
+          "1": "echo \"Building docker image:\" ec-compute-fargate-dev",
+          "2": "(docker build --tag ec-compute-fargate-dev .)",
+          "3": "echo \"Login into ECR...\"",
+          "4": "$(aws ecr get-login --no-include-email --region us-east-1)",
+          "5": "echo \"Tagging image...\"",
+          "6": "docker tag ec-compute-fargate-dev 573944535954.dkr.ecr.us-east-1.amazonaws.com/ec-compute-fargate-dev",
+          "7": "echo \"Pushing docker image into repository:\" 573944535954.dkr.ecr.us-east-1.amazonaws.com/ec-compute-fargate-dev",
+          "8": "docker push 573944535954.dkr.ecr.us-east-1.amazonaws.com/ec-compute-fargate-dev",
+          "9": "echo \"Finished successfully!!!\"",
+          "deploy-container": "for i in {1..9}; do sls --stage dev $i; done",
+          "remove-container": "aws ecr delete-repository --repository-name ec-compute-fargate-dev --region us-east-1 --force"
+        },
+        "hooks": {
+          "before:remove:remove": "sls --stage dev remove-container",
+          "after:deploy:finalize": "sls --stage dev deploy-container"
+        }
+      }
+    },
+    "plugins": [
+      "serverless-plugin-scripts"
+    ],
+    "pluginsData": {},
+    "functions": {
+      "fargate": {
+        "handler": "lambda/handler.handler",
+        "timeout": 60,
+        "events": [],
+        "name": "ec-compute-fargate-dev-fargate",
+        "package": {},
+        "memory": 1024,
+        "runtime": "python3.6",
+        "vpc": {}
+      }
+    },
+    "resources": {
+      "Resources": {
+        "EcsRepository": {
+          "Type": "AWS::ECR::Repository",
+          "Properties": {
+            "RepositoryName": "ec-compute-fargate-dev"
+          }
+        },
+        "LogGroup": {
+          "Type": "AWS::Logs::LogGroup",
+          "Properties": {
+            "LogGroupName": "ec-compute-fargate-dev"
+          }
+        },
+        "TaskDefinition": {
+          "Type": "AWS::ECS::TaskDefinition",
+          "Properties": {
+            "Family": "ec-compute-fargate-dev",
+            "Cpu": 512,
+            "Memory": 1024,
+            "NetworkMode": "awsvpc",
+            "RequiresCompatibilities": [
+              "FARGATE"
+            ],
+            "TaskRoleArn": "arn:aws:iam::573944535954:role/ecsTaskExecutionRole",
+            "ExecutionRoleArn": "arn:aws:iam::573944535954:role/ecsTaskExecutionRole",
+            "ContainerDefinitions": [
+              {
+                "Name": "ec-compute-fargate-dev",
+                "Cpu": 512,
+                "Memory": 1024,
+                "Image": "573944535954.dkr.ecr.us-east-1.amazonaws.com/ec-compute-fargate-dev",
+                "LogConfiguration": {
+                  "LogDriver": "awslogs",
+                  "Options": {
+                    "awslogs-group": "ec-compute-fargate-dev",
+                    "awslogs-region": "us-east-1",
+                    "awslogs-stream-prefix": "ecs"
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      "Outputs": {}
+    },
+    "artifact": "/home/ec2-user/environment/personal/github/aws-compute/fargate/.serverless/ec-compute-fargate.zip"
+  },
+  "package": {
+    "artifactDirectoryName": "serverless/ec-compute-fargate/dev/1539835939151-2018-10-18T04:12:19.151Z",
+    "artifact": "ec-compute-fargate.zip"
+  }
+}

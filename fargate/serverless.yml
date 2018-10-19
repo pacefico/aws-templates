@@ -1,0 +1,93 @@
+service: ec-compute-fargate
+
+provider:
+  name: aws
+  runtime: python3.6
+  stage: dev
+  region: us-east-1
+
+  iamRoleStatements:
+    - Effect: Allow
+      Action:
+        - lambda:InvokeFunction
+      Resource: "arn:aws:lambda:us-east-1:*:function:*"
+    - Effect: Allow
+      Action:
+        - ecs:*
+      Resource: "*"
+    - Effect: Allow
+      Action:
+        - iam:PassRole
+      Resource: "arn:aws:iam::*:role/ecsTaskExecutionRole"
+
+resources:
+    Resources:
+      EcsRepository:
+        Type: "AWS::ECR::Repository"
+        Properties:
+          RepositoryName: ${self:custom.task_name}
+
+      LogGroup:
+        Type: "AWS::Logs::LogGroup"
+        Properties:
+          LogGroupName: ${self:custom.task_name}
+
+      TaskDefinition:
+        Type: "AWS::ECS::TaskDefinition"
+        Properties:
+          Family: ${self:custom.task_name}
+          Cpu: 512
+          Memory: 1024
+          NetworkMode: awsvpc
+          RequiresCompatibilities:
+            - FARGATE
+          TaskRoleArn: arn:aws:iam::${self:custom.account}:role/ecsTaskExecutionRole
+          ExecutionRoleArn: arn:aws:iam::${self:custom.account}:role/ecsTaskExecutionRole
+          ContainerDefinitions:
+            - Name: ${self:custom.task_name}
+              Cpu: 512
+              Memory: 1024
+              Image: ${self:custom.account}.dkr.ecr.${self:provider.region}.amazonaws.com/${self:custom.task_name}
+              LogConfiguration: 
+                LogDriver: awslogs
+                Options:
+                  awslogs-group: ${self:custom.task_name}
+                  awslogs-region: ${self:provider.region}
+                  awslogs-stream-prefix: ecs
+
+functions:
+  fargate:
+    handler: lambda/handler.handler
+    timeout: 60
+
+custom:
+  account: your_aws_acoount_id
+  task_name: ${self:service}-${self:provider.stage}
+  repo_uri:  ${self:custom.account}.dkr.ecr.${self:provider.region}.amazonaws.com/${self:custom.task_name}
+
+  scripts:
+    commands:
+      # Declare external commands that creates Docker image and upload it to aws
+      deploy-container: for i in {1..9}; do sls --stage ${self:provider.stage} $i; done
+      remove-container: aws ecr delete-repository --repository-name ${self:custom.task_name} --region ${self:provider.region} --force
+      1: echo "Building docker image:" ${self:custom.task_name}
+      2: (docker build --tag ${self:custom.task_name} .)
+      3: echo "Login into ECR..." 
+      4: $(aws ecr get-login --no-include-email --region ${self:provider.region})
+      5: echo "Tagging image..." 
+      6: docker tag ${self:custom.task_name} ${self:custom.repo_uri}
+      7: echo "Pushing docker image into repository:" ${self:custom.repo_uri}
+      8: docker push ${self:custom.repo_uri}
+      9: echo "Finished successfully!!!"
+    hooks:
+      'before:remove:remove': sls --stage ${self:provider.stage} remove-container
+      # Run external commands (declared above) after stack deploy.
+      'after:deploy:finalize': sls --stage ${self:provider.stage} deploy-container
+
+plugins:
+  - serverless-plugin-scripts
+
+package:
+  exclude:
+    - node_modules/**
+    
