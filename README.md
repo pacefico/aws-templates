@@ -7,7 +7,7 @@ Aws cloud serverless templates
 
 ## Setup
 
-- Install nodedj 
+- Install nodejs
 ```bash
 sudo apt install nodejs
 ```
